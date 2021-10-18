@@ -9,6 +9,8 @@ from api.views import QuestionViewSet, SampleMultipleChoiceQuestionViewSet, User
     UpdateProfileViewSet, SubmissionViewSet, ObtainAuthTokenView, MultipleChoiceQuestionViewSet, JavaQuestionViewSet, \
     ParsonsQuestionViewSet, EventViewSet, TokenUseViewSet, SchemaViewSet, DifficultyViewSet, ChangePasswordViewSet
 from api.views.admin import AdminViewSet
+from api.views.java_submission import JavaSubmissionViewSet
+from api.views.parsons_submission import ParsonsSubmissionViewSet
 
 router = DefaultRouter()
 router.register(r'questions', QuestionViewSet, basename='question')
@@ -37,6 +39,9 @@ router.register(r'token-use', TokenUseViewSet, basename='token-use')
 router.register(r'schema', SchemaViewSet, basename='schema')
 router.register(r'difficulty', DifficultyViewSet, basename='difficulty')
 router.register(r'admin', AdminViewSet, basename='admin')
+router.register(r'java-submission', JavaSubmissionViewSet, basename='java-submission')
+router.register(r'parson-submission', ParsonsSubmissionViewSet, basename='parsons-submission')
+
 
 app_name = 'api'
 urlpatterns = [

@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 import api.error_messages as ERROR_MESSAGES
 from api.serializers import QuestionSerializer
+from api.serializers.uqj import UQJSerializer
 from course.models.parsons import ParsonsQuestion, ParsonsSubmission
 
 
@@ -24,9 +25,9 @@ class ParsonsQuestionSerializer(serializers.ModelSerializer):
 class ParsonsSubmissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = ParsonsSubmission
-        fields = ['pk', 'submission_time', 'answer', 'grade', 'is_correct', 'is_partially_correct', 'finalized',
-                  'status', 'tokens_received', 'token_value', 'question', 'get_decoded_stderr', 'get_decoded_results',
+        fields = ['pk', 'uqj', 'submission_time', 'answer', 'grade', 'is_correct', 'is_partially_correct', 'finalized',
+                  'status', 'tokens_received', 'token_value', 'get_decoded_stderr', 'get_decoded_results',
                   'get_formatted_test_results', 'get_passed_test_results', 'get_failed_test_results', 'get_num_tests',
                   'formatted_tokens_received', 'answer_files', 'show_answer', 'show_detail', 'status_color']
 
-    question = QuestionSerializer()
+    uqj = UQJSerializer()

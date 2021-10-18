@@ -7,7 +7,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 import api.error_messages as ERROR_MESSAGES
-from api.serializers import JavaSubmissionSerializer, MultipleChoiceSubmissionSerializer, ParsonsSubmissionSerializer
+from api.serializers import SubmissionSerializer, JavaSubmissionSerializer, MultipleChoiceSubmissionSerializer, ParsonsSubmissionSerializer
+
 from course.exceptions import SubmissionException
 from course.models.java import JavaQuestion, JavaSubmission
 from course.models.models import Submission, Question
@@ -17,6 +18,7 @@ from course.views.java import submit_solution as submit_java_solution
 from course.views.multiple_choice import submit_solution as submit_multiple_choice_solution
 from course.views.parsons import submit_solution as submit_parsons_solution
 from general.services.action import create_submission_action
+from collections import OrderedDict
 
 
 class SubmissionViewSet(viewsets.GenericViewSet):
@@ -28,6 +30,7 @@ class SubmissionViewSet(viewsets.GenericViewSet):
     filter_backends = [filters.OrderingFilter, DjangoFilterBackend]
     ordering_fields = ['submission_time', ]
     queryset = Submission.objects.all()
+    serializer_class = SubmissionSerializer
 
     def get_serialized_data(self, submission):
         if isinstance(submission, MultipleChoiceSubmission):
@@ -36,6 +39,28 @@ class SubmissionViewSet(viewsets.GenericViewSet):
             return JavaSubmissionSerializer(submission).data
         if isinstance(submission, ParsonsSubmission):
             return ParsonsSubmissionSerializer(submission).data
+
+    def get_submission_serializer_class(self, submission):
+        if isinstance(submission, MultipleChoiceSubmission):
+            return MultipleChoiceSubmissionSerializer(submission)
+        if isinstance(submission, JavaSubmission):
+            return JavaSubmissionSerializer(submission)
+        if isinstance(submission, ParsonsSubmission):
+            return ParsonsSubmissionSerializer(submission)
+        return self.get_serializer_class()
+
+    def get_serializer(self, *args, **kwargs):
+        submission = kwargs.get('instance', None)
+        if not submission and len(args) == 1:
+            submission = args[0]
+
+        if submission:
+            serializer_class = self.get_submission_serializer_class(submission)
+        else:
+            serializer_class = self.get_serializer_class()
+
+        kwargs['context'] = self.get_serializer_context()
+        return serializer_class(*args, **kwargs)
 
     def list(self, request):
         question = request.GET.get("question", None)
@@ -49,8 +74,8 @@ class SubmissionViewSet(viewsets.GenericViewSet):
         ]
         return Response(results)
 
-    def retrieve(self, request, pk=None):
-        submission = get_object_or_404(Submission.objects.all(), pk=pk)
+    def retrieve(self, request, pk = None):
+        submission = get_object_or_404(Submission.objects.all(), pk)
         if submission.uqj.user != request.user:
             raise PermissionDenied()
         return Response(self.get_serialized_data(submission))
@@ -79,3 +104,11 @@ class SubmissionViewSet(viewsets.GenericViewSet):
 
         create_submission_action(submission)
         return Response(self.get_serialized_data(submission), status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['get'], url_path='get-submission')
+    def get_submission(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+        serialized_submission = []
+        for obj in queryset:
+            serialized_submission.append(OrderedDict(self.get_serializer(obj).data))
+        return Response(serialized_submission)
