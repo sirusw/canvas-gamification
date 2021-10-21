@@ -7,8 +7,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 import api.error_messages as ERROR_MESSAGES
-from api.serializers import SubmissionSerializer, JavaSubmissionSerializer, MultipleChoiceSubmissionSerializer, ParsonsSubmissionSerializer
 
+from api.serializers import SubmissionSerializer, JavaSubmissionSerializer, MultipleChoiceSubmissionSerializer, \
+    ParsonsSubmissionSerializer
+from api.serializers import JavaSubmissionSerializer, MultipleChoiceSubmissionSerializer, ParsonsSubmissionSerializer
+from api.serializers.java_question import JavaSubmissionHiddenDetailsSerializer
+from api.serializers.multiple_choice_question import MultipleChoiceSubmissionHiddenDetailsSerializer
+from api.serializers.parsons_question import ParsonsSubmissionHiddenDetailsSerializer
 from course.exceptions import SubmissionException
 from course.models.java import JavaQuestion, JavaSubmission
 from course.models.models import Submission, Question
@@ -21,6 +26,23 @@ from general.services.action import create_submission_action
 from collections import OrderedDict
 
 
+def get_serialized_data(submission):
+    if submission.question.is_exam_and_open:
+        if isinstance(submission, MultipleChoiceSubmission):
+            return MultipleChoiceSubmissionHiddenDetailsSerializer(submission).data
+        if isinstance(submission, JavaSubmission):
+            return JavaSubmissionHiddenDetailsSerializer(submission).data
+        if isinstance(submission, ParsonsSubmission):
+            return ParsonsSubmissionHiddenDetailsSerializer(submission).data
+    else:
+        if isinstance(submission, MultipleChoiceSubmission):
+            return MultipleChoiceSubmissionSerializer(submission).data
+        if isinstance(submission, JavaSubmission):
+            return JavaSubmissionSerializer(submission).data
+        if isinstance(submission, ParsonsSubmission):
+            return ParsonsSubmissionSerializer(submission).data
+
+
 class SubmissionViewSet(viewsets.GenericViewSet):
     """
     Optional Parameters
@@ -31,14 +53,6 @@ class SubmissionViewSet(viewsets.GenericViewSet):
     ordering_fields = ['submission_time', ]
     queryset = Submission.objects.all()
     serializer_class = SubmissionSerializer
-
-    def get_serialized_data(self, submission):
-        if isinstance(submission, MultipleChoiceSubmission):
-            return MultipleChoiceSubmissionSerializer(submission).data
-        if isinstance(submission, JavaSubmission):
-            return JavaSubmissionSerializer(submission).data
-        if isinstance(submission, ParsonsSubmission):
-            return ParsonsSubmissionSerializer(submission).data
 
     def get_submission_serializer_class(self, submission):
         if isinstance(submission, MultipleChoiceSubmission):
@@ -70,15 +84,15 @@ class SubmissionViewSet(viewsets.GenericViewSet):
             query_set = query_set.filter(uqj__question_id=question)
 
         results = [
-            self.get_serialized_data(submission) for submission in query_set
+            get_serialized_data(submission) for submission in query_set
         ]
         return Response(results)
 
-    def retrieve(self, request, pk = None):
+    def retrieve(self, request, pk=None):
         submission = get_object_or_404(Submission.objects.all(), pk)
         if submission.uqj.user != request.user:
             raise PermissionDenied()
-        return Response(self.get_serialized_data(submission))
+        return Response(get_serialized_data(submission))
 
     @action(detail=False, methods=['post'])
     def submit(self, request):
@@ -103,7 +117,7 @@ class SubmissionViewSet(viewsets.GenericViewSet):
             raise ValidationError("{}".format(e))
 
         create_submission_action(submission)
-        return Response(self.get_serialized_data(submission), status=status.HTTP_201_CREATED)
+        return Response(get_serialized_data(submission), status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=['get'], url_path='get-submission')
     def get_submission(self, request):

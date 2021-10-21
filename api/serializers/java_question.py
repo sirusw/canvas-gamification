@@ -31,4 +31,14 @@ class JavaSubmissionSerializer(serializers.ModelSerializer):
                   'get_decoded_results', 'get_formatted_test_results', 'get_passed_test_results',
                   'get_failed_test_results', 'get_num_tests', 'formatted_tokens_received', 'show_answer', 'show_detail',
                   'status_color']
+
     uqj = UQJSerializer()
+
+
+class JavaSubmissionHiddenDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = JavaSubmission
+        fields = ['pk', 'submission_time', 'answer', 'token_value', 'answer_files', 'question', 'show_answer',
+                  'show_detail']
+
+    question = QuestionSerializer()
