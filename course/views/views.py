@@ -189,6 +189,8 @@ def token_values_table_view(request):
 
                 values[-1].append(token_value.value)
 
+
+
     return render(request, 'token_values_table.html', {
         'values': values,
         'difficulties': [x for d, x in DIFFICULTY_CHOICES],

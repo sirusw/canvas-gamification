@@ -202,13 +202,15 @@ def code_analysis(sub_dict):
     return [lines, blank_lines, comment_lines, import_lines, cc, method, operator, operand, operator_list, operand_list]
 
 
-def main():
+
+def fetch():
     submission_dict = init()
     java_dict = submission_dict['java_sub']
     java_sub = java_dict['results']
     # java_answer_file = java_sub['answer_files']
     parsons_dict = submission_dict['parsons_sub']
     parsons_sub = parsons_dict['results'][0]
+    result = ''
 
     for i in range(len(java_sub)):
         ans_file = java_sub[i]['answer_files']
@@ -217,7 +219,7 @@ def main():
         sub = JavaSub(java_sub[i]['pk'], uqj['id'], uqj['question_id'], uqj['user'], ans_file, res[0], res[1], res[2],
                       res[3], res[4], res[5], res[6], res[7], res[8], res[9])
         javaSub_list.append(sub)
-
+    
     for s in javaSub_list:
         unique_operator = sum(len(y) for y in s.operator_list)
         unique_operand = sum(len(x) for x in s.operand_list)
@@ -228,7 +230,7 @@ def main():
         effort = vol * difficulty
         error = vol / 3000
         test_time = effort / 18
-        print("PK: " + str(s.pk) + "\nUQJ id: " + str(s.uqj_id) + "\nQuestion id: " + str(s.q_id) + "\nUser id: " + str(
+        result += "PK: " + str(s.pk) + "\nUQJ id: " + str(s.uqj_id) + "\nQuestion id: " + str(s.q_id) + "\nUser id: " + str(
             s.u_id) + "\nNumber of lines: " + str(s.lines)
               + "\nNumber of blank lines: " + str(s.blank_lines) + "\nNumber of comment lines: " + str(s.comment_lines)
               + "\nNumber of imports: " + str(s.import_lines) + "\nCyclomatic complexity: " + str(s.cc)
@@ -236,21 +238,21 @@ def main():
               + "\nNumber of operands: " + str(s.operand)
               + "\nNumber of unique operators: " + str(sum(len(y) for y in s.operator_list))
               + "\nNumber of unique operands: " +  str(sum(len(x) for x in s.operand_list))
-              #+ "\nOperators: " + str(s.operator_list)
-              #+ "\nOperands: " + str(s.operand_list)
+              + "\nOperators: " + str(s.operator_list)
+              + "\nOperands: " + str(s.operand_list)
               + "\nVocabulary: " + str(vocab)
               + "\nSize: " + str(size)
               + "\nVolume: " + str(round(vol, 2))
               + "\nDifficulty: " + str(difficulty)
               + "\nEffort: " + str(round(effort, 2))
               + "\nError: " + str(round(error, 5))
-              + "\nTest time:" + str(round(test_time, 3)))
-        print("--------------------------")
+              + "\nTest time:" + str(round(test_time, 3))
+        res += "--------------------------"
         for ans in s.ans_file.values():
-            print(ans)
-            print("--------------------------")
-        print("==========================================")
+            result += ans
+            result += "--------------------------"
+        result += "=========================================="
+    return result
 
 
-if __name__ == "__main__":
-    main()
+
