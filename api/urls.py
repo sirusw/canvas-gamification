@@ -12,7 +12,7 @@ from api.views.admin import AdminViewSet
 from api.views.java_submission import JavaSubmissionViewSet
 from api.views.parsons_submission import ParsonsSubmissionViewSet
 from api.views.course_admin import CourseAdminViewSet
-from api.views.submission_analytics import SubmissionAnalyticsViewSet
+
 
 router = DefaultRouter()
 router.register(r'questions', QuestionViewSet, basename='question')
@@ -44,7 +44,6 @@ router.register(r'admin', AdminViewSet, basename='admin')
 router.register(r'java-submission', JavaSubmissionViewSet, basename='java-submission')
 router.register(r'parson-submission', ParsonsSubmissionViewSet, basename='parsons-submission')
 router.register(r'course-admin', CourseAdminViewSet, basename='admin-course')
-router.register(r'submission-analytics', SubmissionAnalyticsViewSet, basename='submission-analytics')
 
 app_name = 'api'
 urlpatterns = [
