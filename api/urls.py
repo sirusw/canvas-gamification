@@ -11,8 +11,6 @@ from api.views import QuestionViewSet, SampleMultipleChoiceQuestionViewSet, User
 from api.views.admin import AdminViewSet
 from api.views.java_submission import JavaSubmissionViewSet
 from api.views.parsons_submission import ParsonsSubmissionViewSet
-from api.views.course_admin import CourseAdminViewSet
-
 
 router = DefaultRouter()
 router.register(r'questions', QuestionViewSet, basename='question')
@@ -43,7 +41,7 @@ router.register(r'difficulty', DifficultyViewSet, basename='difficulty')
 router.register(r'admin', AdminViewSet, basename='admin')
 router.register(r'java-submission', JavaSubmissionViewSet, basename='java-submission')
 router.register(r'parson-submission', ParsonsSubmissionViewSet, basename='parsons-submission')
-router.register(r'course-admin', CourseAdminViewSet, basename='admin-course')
+
 
 app_name = 'api'
 urlpatterns = [

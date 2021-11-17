@@ -31,12 +31,3 @@ class ParsonsSubmissionSerializer(serializers.ModelSerializer):
                   'formatted_tokens_received', 'answer_files', 'show_answer', 'show_detail', 'status_color']
 
     uqj = UQJSerializer()
-
-
-class ParsonsSubmissionHiddenDetailsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ParsonsSubmission
-        fields = ['pk', 'submission_time', 'answer', 'token_value', 'question', 'answer_files', 'show_answer',
-                  'show_detail']
-
-    question = QuestionSerializer()
