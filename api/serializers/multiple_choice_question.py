@@ -28,11 +28,11 @@ class MultipleChoiceQuestionSerializer(serializers.ModelSerializer):
 class MultipleChoiceSubmissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = MultipleChoiceSubmission
-        fields = ['pk', 'uqj', 'submission_time', 'answer', 'grade', 'is_correct', 'is_partially_correct', 'finalized',
-                  'status', 'tokens_received', 'token_value', 'answer_display', 'show_answer',
+        fields = ['pk', 'submission_time', 'answer', 'grade', 'is_correct', 'is_partially_correct', 'finalized',
+                  'status', 'tokens_received', 'token_value', 'question', 'answer_display', 'show_answer',
                   'show_detail', 'status_color']
 
-    uqj = UQJSerializer()
+    question = QuestionSerializer()
 
 
 class MultipleChoiceSubmissionHiddenDetailsSerializer(serializers.ModelSerializer):
