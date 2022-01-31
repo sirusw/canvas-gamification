@@ -1,9 +1,7 @@
 from rest_framework import serializers
-
-from analytics.models import JavaSubmissionAnalytics, MCQSubmissionAnalytics, ParsonsSubmissionAnalytics
 from analytics.models.java import JavaQuestionAnalytics
 from analytics.models.mcq import MCQQuestionAnalytics
-from analytics.models.models import SubmissionAnalytics, QuestionAnalytics
+from analytics.models.models import QuestionAnalytics
 from analytics.models.parsons import ParsonsQuestionAnalytics
 
 

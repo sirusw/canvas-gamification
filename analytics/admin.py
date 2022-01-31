@@ -2,7 +2,7 @@ from django.contrib import admin
 from analytics.models import JavaSubmissionAnalytics, ParsonsSubmissionAnalytics, MCQSubmissionAnalytics
 from analytics.models.java import JavaQuestionAnalytics
 from analytics.models.mcq import MCQQuestionAnalytics
-from analytics.models.models import SubmissionAnalytics, QuestionAnalytics
+from analytics.models.models import SubmissionAnalytics, QuestionAnalytics, EventAnalytics
 from analytics.models.parsons import ParsonsQuestionAnalytics
 
 admin.site.register(SubmissionAnalytics)
@@ -13,3 +13,4 @@ admin.site.register(QuestionAnalytics)
 admin.site.register(JavaQuestionAnalytics)
 admin.site.register(ParsonsQuestionAnalytics)
 admin.site.register(MCQQuestionAnalytics)
+admin.site.register(EventAnalytics)

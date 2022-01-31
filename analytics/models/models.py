@@ -36,3 +36,15 @@ class QuestionAnalytics(PolymorphicModel):
     avg_attempt = models.DecimalField(max_digits=4, decimal_places=1, default=0)
     attempt_std_dev = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     median_time_spent = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+
+
+class EventAnalytics(models.Model):
+    id = models.AutoField(primary_key=True)
+    time_created = models.DateTimeField(auto_now_add=True)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE)
+    course = models.ForeignKey(CanvasCourse, on_delete=models.CASCADE, null=True)
+    high_score = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    lowest_score = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    avg_score = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    avg_score_st_dev = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    num_participants = models.IntegerField(default=0)
