@@ -65,6 +65,20 @@ def create_event_analytics(event):
         avg_score_st_dev = 0
         num_participants = 0
 
-    EventAnalytics.objects.create(event=event, course=course, high_score=high_score, lowest_score=low_score,
-                                  avg_score=avg_score, avg_score_st_dev=avg_score_st_dev,
-                                  num_participants=num_participants)
+    analytics = None
+    try:
+        analytics = EventAnalytics.objects.get(event=event)
+    except EventAnalytics.DoesNotExist:
+        analytics = EventAnalytics.objects.create(event=event, course=course, high_score=high_score, lowest_score=low_score,
+                                      avg_score=avg_score, avg_score_st_dev=avg_score_st_dev,
+                                      num_participants=num_participants)
+        return EventAnalyticsSerializer(analytics).data
+    else:
+        analytics.high_score = high_score
+        analytics.lowest_score = low_score
+        analytics.avg_score = avg_score
+        analytics.avg_score_st_dev = avg_score_st_dev
+        analytics.num_participants = num_participants
+        analytics.save()
+        return EventAnalyticsSerializer(analytics).data
+
