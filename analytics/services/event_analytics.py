@@ -3,6 +3,7 @@ from django.utils.timezone import utc
 
 from accounts.models import MyUser
 from analytics.models.models import EventAnalytics
+from analytics.services.question_analytics import get_all_question_analytics
 from api.serializers.event_analytics import EventAnalyticsSerializer
 from canvas.models import Event
 from canvas.utils.utils import get_total_event_grade
@@ -10,6 +11,7 @@ from course.models.models import Submission, UserQuestionJunction
 
 
 def get_event_analytics(event):
+    get_all_question_analytics()
     try:
         analytics = EventAnalytics.objects.get(event=event)
 
@@ -38,6 +40,7 @@ def get_all_event_analytics():
 
 
 def create_event_analytics(event):
+    get_all_question_analytics()
     course = event.course
     distinct_uqj = Submission.objects.values('uqj').distinct()
     users = []
@@ -65,13 +68,15 @@ def create_event_analytics(event):
         avg_score_st_dev = 0
         num_participants = 0
 
+    grades = [{'grades': grades}]
     analytics = None
     try:
         analytics = EventAnalytics.objects.get(event=event)
     except EventAnalytics.DoesNotExist:
-        analytics = EventAnalytics.objects.create(event=event, course=course, high_score=high_score, lowest_score=low_score,
-                                      avg_score=avg_score, avg_score_st_dev=avg_score_st_dev,
-                                      num_participants=num_participants)
+        analytics = EventAnalytics.objects.create(event=event, course=course, high_score=high_score,
+                                                  lowest_score=low_score,
+                                                  avg_score=avg_score, avg_score_st_dev=avg_score_st_dev,
+                                                  num_participants=num_participants, grades=grades)
         return EventAnalyticsSerializer(analytics).data
     else:
         analytics.high_score = high_score
@@ -79,6 +84,6 @@ def create_event_analytics(event):
         analytics.avg_score = avg_score
         analytics.avg_score_st_dev = avg_score_st_dev
         analytics.num_participants = num_participants
+        analytics.grades = grades
         analytics.save()
         return EventAnalyticsSerializer(analytics).data
-

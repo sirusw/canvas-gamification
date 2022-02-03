@@ -48,3 +48,4 @@ class EventAnalytics(models.Model):
     avg_score = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     avg_score_st_dev = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     num_participants = models.IntegerField(default=0)
+    grades = JSONField()

@@ -59,7 +59,7 @@ def get_all_question_analytics():
             try:
                 analytics = QuestionAnalytics.objects.get(question=question)
             except QuestionAnalytics.DoesNotExist:
-                return create_question_analytics(question)
+                create_question_analytics(question)
             else:
                 now = datetime.utcnow().replace(tzinfo=utc)
                 time_diff = now - analytics.time_created
@@ -72,6 +72,7 @@ def get_all_question_analytics():
 
 def get_question_analytics_by_event(event):
     get_all_submission_analytics()
+    get_all_question_analytics()
     return QuestionAnalytics.objects.filter(event=event)
 
 
@@ -91,7 +92,6 @@ def create_question_analytics(question):
     distinct_user = []
     for item in analytics_by_question:
 
-        total_grade += item.submission.grade
         grade.append(item.submission.grade)
         time_spent.append(item.time_spent)
 
@@ -99,6 +99,7 @@ def create_question_analytics(question):
     for user in distinct_user:
         total_attempts += analytics_by_question.filter(user_id=user['user_id']).aggregate(Max('num_attempts'))['num_attempts__max']
         attempts.append(analytics_by_question.filter(user_id=user['user_id']).aggregate(Max('num_attempts'))['num_attempts__max'])
+        total_grade += analytics_by_question.filter(user_id=user['user_id']).aggregate(Max('submission__grade'))['submission__grade__max']
 
     avg_attempt = total_attempts / num_respondents
     attempt_std_dev = statistics.stdev(attempts) if len(attempts) > 1 else 0
@@ -268,15 +269,18 @@ def create_question_analytics(question):
             question_analytics.save()
         return ParsonsQuestionAnalyticsSerializer(question_analytics).data
     if isinstance(analytics_by_question.first(), MCQSubmissionAnalytics):
-        most_frequent_wrong_ans = []
+        most_frequent_wrong_ans = [{}]
         answers = MCQSubmissionAnalytics.objects \
             .filter(question=question).values_list('answer', flat=True)
         distinct_ans = answers.distinct()
         correct_ans = question.answer
         answers = list(answers)
         for ans in distinct_ans:
-            if ans != correct_ans:
-                most_frequent_wrong_ans.append({ans: answers.count(ans)})
+            most_frequent_wrong_ans[0][ans] = answers.count(ans)
+        choices = ['a', 'b', 'c', 'd']
+        non_chosen_choice = [x for x in choices if x not in set(distinct_ans)]
+        for item in non_chosen_choice:
+            most_frequent_wrong_ans[0][item] = 0
         question_analytics = None
         try:
             question_analytics = MCQQuestionAnalytics.objects.get(question=question)
