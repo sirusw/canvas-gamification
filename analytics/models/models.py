@@ -49,3 +49,16 @@ class EventAnalytics(models.Model):
     avg_score_st_dev = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     num_participants = models.IntegerField(default=0)
     grades = JSONField()
+
+
+class UserAnalytics(models.Model):
+    id = models.AutoField(primary_key=True)
+    time_created = models.DateTimeField(auto_now_add=True)
+    course = models.ForeignKey(CanvasCourse, on_delete=models.CASCADE)
+    user = models.ForeignKey(MyUser, on_delete=models.CASCADE)
+
+    submissions = models.IntegerField(default=0)
+    missing_submissions = models.IntegerField(default=0)
+    current_score = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    past_week_question_views = models.IntegerField(default=0)
+    last_active = models.DateTimeField()

@@ -3,18 +3,20 @@ from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
+from accounts.models import MyUser
 from analytics.models.java import JavaQuestionAnalytics
 from analytics.models.mcq import MCQQuestionAnalytics
-from analytics.models.models import SubmissionAnalytics, QuestionAnalytics, EventAnalytics
+from analytics.models.models import SubmissionAnalytics, QuestionAnalytics, EventAnalytics, UserAnalytics
 from analytics.models.parsons import ParsonsQuestionAnalytics
 from analytics.services.question_analytics import get_question_analytics_by_event
 from analytics.services.event_analytics import get_event_analytics
 from analytics.services.question_analytics import get_all_question_analytics, get_question_analytics
 from analytics.services.submission_analytics import get_submission_analytics, get_all_submission_analytics
+from analytics.services.user_analytics import get_all_user_analytics, get_user_analytics
 from api.permissions import TeacherAccessPermission
 from api.serializers.question_analytics import MCQQuestionAnalyticsSerializer, JavaQuestionAnalyticsSerializer, \
     ParsonsQuestionAnalyticsSerializer
-from canvas.models import Event
+from canvas.models import Event, CanvasCourse
 from course.models.models import Submission, Question
 
 
@@ -81,3 +83,21 @@ class EventAnalyticsViewSet(viewsets.GenericViewSet):
         event_id = request.GET.get('id', None)
         event = get_object_or_404(Event, pk=event_id)
         return Response(get_event_analytics(event))
+
+
+class UserAnalyticsViewSet(viewsets.GenericViewSet):
+    permission_classes = [TeacherAccessPermission]
+    queryset = UserAnalytics.objects.all()
+
+    def list(self, request):
+        course_id = request.GET.get('course', None)
+        course = get_object_or_404(CanvasCourse, pk=course_id)
+        return Response(get_all_user_analytics(course))
+
+    @action(detail=False, methods=['get'], url_path='user')
+    def user(self, request):
+        course_id = request.GET.get('course', None)
+        course = get_object_or_404(CanvasCourse, pk=course_id)
+        user_id = request.GET.get('user', None)
+        user = get_object_or_404(MyUser, pk=user_id)
+        return Response((get_user_analytics(user, course)))

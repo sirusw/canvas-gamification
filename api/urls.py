@@ -11,7 +11,7 @@ from api.views import QuestionViewSet, SampleMultipleChoiceQuestionViewSet, User
     UpdateUQJViewSet, QuestionReportViewSet
 
 from api.views.admin import AdminViewSet
-from api.views.analytics import AnalyticsViewSet, QuestionAnalyticsViewSet, EventAnalyticsViewSet
+from api.views.analytics import AnalyticsViewSet, QuestionAnalyticsViewSet, EventAnalyticsViewSet, UserAnalyticsViewSet
 from api.views.course_admin import CourseAdminViewSet
 from api.views.submission_analytics import SubmissionAnalyticsViewSet
 
@@ -47,6 +47,7 @@ router.register(r'question-report', QuestionReportViewSet, basename='question-re
 router.register(r'submission-analytics', AnalyticsViewSet, basename='submission-analytics')
 router.register(r'question-analytics', QuestionAnalyticsViewSet, basename='question-analytics')
 router.register(r'event-analytics', EventAnalyticsViewSet, basename='event-analytics')
+router.register(r'analytics/user', UserAnalyticsViewSet, basename='user-analytics')
 
 app_name = 'api'
 urlpatterns = [
