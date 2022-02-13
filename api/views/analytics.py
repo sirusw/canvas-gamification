@@ -19,6 +19,7 @@ from analytics.services.question_analytics import get_all_question_analytics, ge
 from api.serializers.event_analytics import EventAnalyticsSerializer
 from api.serializers.question_analytics import MCQQuestionAnalyticsSerializer, JavaQuestionAnalyticsSerializer, \
     ParsonsQuestionAnalyticsSerializer
+from api.serializers.user_analytics import UserAnalyticsSerializer
 from canvas.models import Event, CanvasCourse
 from course.models.models import Submission, Question
 from analytics.models import MCQSubmissionAnalytics, ParsonsSubmissionAnalytics, JavaSubmissionAnalytics
@@ -102,7 +103,7 @@ class EventAnalyticsViewSet(viewsets.GenericViewSet):
     def question(self, request):
         event_id = request.GET.get('id', None)
         event = get_object_or_404(Event, pk=event_id)
-        return Response(get_event_analytics(event))
+        return Response(EventAnalyticsSerializer(get_event_analytics(event)).data)
 
 
 class UserAnalyticsViewSet(viewsets.GenericViewSet):
@@ -112,7 +113,7 @@ class UserAnalyticsViewSet(viewsets.GenericViewSet):
     def list(self, request):
         course_id = request.GET.get('course', None)
         course = get_object_or_404(CanvasCourse, pk=course_id)
-        return Response(get_all_user_analytics(course))
+        return Response(UserAnalyticsSerializer(get_all_user_analytics(course), many=True).data)
 
     @action(detail=False, methods=['get'], url_path='user')
     def user(self, request):
@@ -120,5 +121,5 @@ class UserAnalyticsViewSet(viewsets.GenericViewSet):
         course = get_object_or_404(CanvasCourse, pk=course_id)
         user_id = request.GET.get('user', None)
         user = get_object_or_404(MyUser, pk=user_id)
-        return Response((get_user_analytics(user, course)))
-        return Response(EventAnalyticsSerializer(get_event_analytics(event)).data)
+        return Response(UserAnalyticsSerializer(get_user_analytics(user, course)).data)
+

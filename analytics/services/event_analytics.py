@@ -40,10 +40,8 @@ def create_event_analytics(event):
         high_score = max(grades)
         low_score = min(grades)
         avg_score = sum(grades) / len(grades)
-        print(grades)
         import statistics
         avg_score_st_dev = statistics.pstdev(grades)
-        print(avg_score_st_dev)
         num_participants = len(grades)
     else:
         high_score = 0

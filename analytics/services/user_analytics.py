@@ -1,10 +1,4 @@
-from datetime import datetime
-
-from django.utils.timezone import utc
-
-from accounts.models import MyUser
 from analytics.models.models import UserAnalytics
-from api.serializers.user_analytics import UserAnalyticsSerializer
 from canvas.models import Event, CanvasCourseRegistration
 from canvas.utils.utils import get_total_event_grade
 from course.models.models import Submission, Question, UserQuestionJunction
@@ -51,30 +45,18 @@ def create_user_analytics(user, course):
         last_active = last_active.time_created
     else:
         last_active = course.start_date
-    return UserAnalytics.objects.create(course=course, user=user, submissions=submission_count,
-                                        missing_submissions=missing_submission, current_score=current_score,
-                                        past_week_question_views=past_week_question_views, last_active=last_active)
+    return UserAnalytics(course=course, user=user, submissions=submission_count,
+                         missing_submissions=missing_submission, current_score=current_score,
+                         past_week_question_views=past_week_question_views, last_active=last_active)
 
 
 def get_user_analytics(user, course):
-    try:
-        analytics = UserAnalytics.objects.get(user=user, course=course)
-    except UserAnalytics.DoesNotExist:
-        return create_user_analytics(user, course)
-    else:
-        now = datetime.utcnow().replace(tzinfo=utc)
-        time_diff = now - analytics.time_created
-        time_diff = time_diff.total_seconds()
-        # the analytics expires after one day
-        if time_diff < 86400:
-            return UserAnalyticsSerializer(analytics).data
-        else:
-            return create_user_analytics(user, course)
+    return create_user_analytics(user, course)
 
 
 def get_all_user_analytics(course):
     users = CanvasCourseRegistration.objects.filter(course=course)
+    user_analytics = []
     for user in users:
-        get_user_analytics(user.user, course)
-    user_analytics = UserAnalytics.objects.filter(course=course)
-    return UserAnalyticsSerializer(user_analytics, many=True).data
+        user_analytics.append(get_user_analytics(user.user, course))
+    return user_analytics
