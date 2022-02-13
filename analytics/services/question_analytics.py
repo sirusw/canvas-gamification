@@ -21,67 +21,73 @@ from django.db.models import Avg, Max
 
 
 def get_question_analytics(question):
-    try:
-        if isinstance(question, JavaQuestion):
-            analytics = JavaQuestionAnalytics.objects.get(question=question)
-        if isinstance(question, ParsonsQuestion):
-            analytics = ParsonsQuestionAnalytics.objects.get(question=question)
-        if isinstance(question, MultipleChoiceQuestion):
-            analytics = MCQQuestionAnalytics.objects.get(question=question)
-
-    except QuestionAnalytics.DoesNotExist:
-        return create_question_analytics(question)
-    else:
-        now = datetime.utcnow().replace(tzinfo=utc)
-        time_diff = now - analytics.time_created
-        time_diff = time_diff.total_seconds()
-        # the analytics expires after one day
-        if time_diff < 86400:
-            if isinstance(analytics, JavaQuestionAnalytics):
-                return JavaQuestionAnalyticsSerializer(analytics).data
-            if isinstance(analytics, ParsonsQuestionAnalytics):
-                return ParsonsQuestionAnalyticsSerializer(analytics).data
-            if isinstance(analytics, MCQQuestionAnalytics):
-                return MCQQuestionAnalyticsSerializer(analytics).data
-        else:
-            return create_question_analytics(question)
+    # try:
+    #     if isinstance(question, JavaQuestion):
+    #         analytics = JavaQuestionAnalytics.objects.get(question=question)
+    #     if isinstance(question, ParsonsQuestion):
+    #         analytics = ParsonsQuestionAnalytics.objects.get(question=question)
+    #     if isinstance(question, MultipleChoiceQuestion):
+    #         analytics = MCQQuestionAnalytics.objects.get(question=question)
+    #
+    # except QuestionAnalytics.DoesNotExist:
+    return create_question_analytics(question)
+    # else:
+    #     now = datetime.utcnow().replace(tzinfo=utc)
+    #     time_diff = now - analytics.time_created
+    #     time_diff = time_diff.total_seconds()
+    #     # the analytics expires after one day
+    #     if time_diff < 86400:
+    #         if isinstance(analytics, JavaQuestionAnalytics):
+    #             return JavaQuestionAnalyticsSerializer(analytics).data
+    #         if isinstance(analytics, ParsonsQuestionAnalytics):
+    #             return ParsonsQuestionAnalyticsSerializer(analytics).data
+    #         if isinstance(analytics, MCQQuestionAnalytics):
+    #             return MCQQuestionAnalyticsSerializer(analytics).data
+    #     else:
+    #         return create_question_analytics(question)
 
 
 def get_all_question_analytics():
-    distinct_events = SubmissionAnalytics.objects.values_list('event', flat=True).distinct()
-    for event_id in distinct_events:
-        event = Event.objects.get(id=event_id)
-        course = event.course
-        question_list = SubmissionAnalytics.objects \
-            .filter(event=event).values_list('question', flat=True).distinct()
-        for question_id in question_list:
-            question = Question.objects.get(id=question_id)
-            try:
-                analytics = QuestionAnalytics.objects.get(question=question)
-            except QuestionAnalytics.DoesNotExist:
-                create_question_analytics(question)
-            else:
-                now = datetime.utcnow().replace(tzinfo=utc)
-                time_diff = now - analytics.time_created
-                time_diff = time_diff.total_seconds()
-                # the analytics expires after one day
-                if time_diff > 86400:
-                    create_question_analytics(question)
-    return QuestionAnalyticsSerializer(QuestionAnalytics.objects.all(), many=True).data
+    submission_analytics = get_all_submission_analytics()
+    distinct_events = []
+    analytics = []
+    for item in submission_analytics:
+        if item.event not in distinct_events:
+            distinct_events.append(item.event)
+    for event in distinct_events:
+        question_list = []
+        for item in submission_analytics:
+            if item.event.id == event.id and item.question not in question_list:
+                question_list.append(item.question)
+        for question in question_list:
+            analytics.append(create_question_analytics(question))
+    return analytics
 
 
 def get_question_analytics_by_event(event):
-    get_all_submission_analytics()
-    get_all_question_analytics()
-    return QuestionAnalytics.objects.filter(event=event)
+    analytics = get_all_question_analytics()
+    if analytics is None:
+        return {}
+    analytics_by_event = []
+    for item in analytics:
+        if item.event == event:
+            analytics_by_event.append(item)
+    return analytics_by_event
 
 
 def create_question_analytics(question):
-    get_all_submission_analytics()
+    submission_analytics = get_all_submission_analytics()
     event = question.event
     course = question.course
-    analytics_by_question = SubmissionAnalytics.objects.filter(question=question)
-    num_respondents = analytics_by_question.values_list('user_id', flat=True).distinct().count()
+    analytics_by_question = []
+    for analytics in submission_analytics:
+        if analytics.question.id == question.id:
+            analytics_by_question.append(analytics)
+    num_respondents = []
+    for analytics in analytics_by_question:
+        if analytics.user_id not in num_respondents:
+            num_respondents.append(analytics.user_id)
+    num_respondents = len(num_respondents)
     if num_respondents == 0:
         return 'No Submission Analytics are found.'
     total_attempts = 0
@@ -91,15 +97,19 @@ def create_question_analytics(question):
     time_spent = []
     distinct_user = []
     for item in analytics_by_question:
-
+        total_grade += item.submission.grade
         grade.append(item.submission.grade)
         time_spent.append(item.time_spent)
-
-    distinct_user = analytics_by_question.values('user_id').distinct()
+        if item.user_id not in distinct_user:
+            distinct_user.append(item.user_id)
     for user in distinct_user:
-        total_attempts += analytics_by_question.filter(user_id=user['user_id']).aggregate(Max('num_attempts'))['num_attempts__max']
-        attempts.append(analytics_by_question.filter(user_id=user['user_id']).aggregate(Max('num_attempts'))['num_attempts__max'])
-        total_grade += analytics_by_question.filter(user_id=user['user_id']).aggregate(Max('submission__grade'))['submission__grade__max']
+        max_attempt = 0
+        for item in analytics_by_question:
+            if item.user_id == user:
+                if item.num_attempts > max_attempt:
+                    max_attempt = item.num_attempts
+        total_attempts += max_attempt
+        attempts.append(max_attempt)
 
     avg_attempt = total_attempts / num_respondents
     attempt_std_dev = statistics.stdev(attempts) if len(attempts) > 1 else 0
@@ -109,29 +119,67 @@ def create_question_analytics(question):
     time_spent = [i for i in time_spent if i > 0]
     median_time_spent = statistics.median(time_spent) if len(time_spent) != 0 else 0
 
-    if isinstance(analytics_by_question.first(), JavaSubmissionAnalytics):
-        lines = analytics_by_question.aggregate(Avg('javasubmissionanalytics__lines'))
-        blank_lines = analytics_by_question.aggregate(Avg('javasubmissionanalytics__blank_lines'))
-        comment_lines = analytics_by_question.aggregate(Avg('javasubmissionanalytics__comment_lines'))
-        import_lines = analytics_by_question.aggregate(Avg('javasubmissionanalytics__import_lines'))
-        cc = analytics_by_question.aggregate(Avg('javasubmissionanalytics__cc'))
-        method = analytics_by_question.aggregate(Avg('javasubmissionanalytics__method'))
-        operator = analytics_by_question.aggregate(Avg('javasubmissionanalytics__operator'))
-        operand = analytics_by_question.aggregate(Avg('javasubmissionanalytics__operand'))
-        unique_operator = analytics_by_question.aggregate(Avg('javasubmissionanalytics__unique_operator'))
-        unique_operand = analytics_by_question.aggregate(Avg('javasubmissionanalytics__unique_operand'))
-        vocab = analytics_by_question.aggregate(Avg('javasubmissionanalytics__vocab'))
-        size = analytics_by_question.aggregate(Avg('javasubmissionanalytics__size'))
-        vol = analytics_by_question.aggregate(Avg('javasubmissionanalytics__vol'))
-        difficulty = analytics_by_question.aggregate(Avg('javasubmissionanalytics__difficulty'))
-        effort = analytics_by_question.aggregate(Avg('javasubmissionanalytics__effort'))
-        error = analytics_by_question.aggregate(Avg('javasubmissionanalytics__error'))
-        test_time = analytics_by_question.aggregate(Avg('javasubmissionanalytics__test_time'))
+    lines = 0
+    blank_lines = 0
+    comment_lines = 0
+    import_lines = 0
+    cyclomatic_complexity = 0
+    method = 0
+    operator = 0
+    operand = 0
+    unique_operator = 0
+    unique_operand = 0
+    vocab = 0
+    size = 0
+    vol = 0
+    difficulty = 0
+    effort = 0
+    error = 0
+    test_time = 0
+    count = 0
+    if isinstance(analytics_by_question[0], JavaSubmissionAnalytics) or isinstance(analytics_by_question[0],
+                                                                                   ParsonsSubmissionAnalytics):
+        for item in analytics_by_question:
+            lines += item.lines
+            blank_lines += item.blank_lines
+            comment_lines += item.comment_lines
+            import_lines += item.import_lines
+            cyclomatic_complexity += item.cyclomatic_complexity
+            method += item.method
+            operator += item.operator
+            operand += item.operand
+            unique_operator += item.unique_operator
+            unique_operand += item.unique_operand
+            vocab += item.vocab
+            size += item.size
+            vol += item.vol
+            difficulty += item.difficulty
+            effort += item.effort
+            error += item.error
+            test_time += item.test_time
+            count += 1
 
-        try:
-            question_analytics = JavaQuestionAnalytics.objects.get(question=question)
-        except JavaQuestionAnalytics.DoesNotExist:
-            question_analytics = JavaQuestionAnalytics.objects.create(
+    if isinstance(analytics_by_question[0], JavaSubmissionAnalytics):
+        if count != 0:
+            lines = item.lines / count
+            blank_lines = item.blank_lines / count
+            comment_lines = item.comment_lines / count
+            import_lines = item.import_lines / count
+            cyclomatic_complexity = item.cyclomatic_complexity / count
+            method = item.method / count
+            operator = item.operator / count
+            operand = item.operand / count
+            unique_operator = item.unique_operator / count
+            unique_operand = item.unique_operand / count
+            vocab = item.vocab / count
+            size = item.size / count
+            vol = item.vol / count
+            difficulty = item.difficulty / count
+            effort = item.effort / count
+            error = item.error / count
+            test_time = item.test_time / count
+
+            question_analytics = JavaQuestionAnalytics(
                 question=question,
                 event=event,
                 course=course,
@@ -142,96 +190,49 @@ def create_question_analytics(question):
                 avg_attempt=avg_attempt,
                 attempt_std_dev=attempt_std_dev,
                 median_time_spent=median_time_spent,
-                lines=[elem for elem in lines.values()][0],
-                blank_lines=[elem for elem in blank_lines.values()][0],
-                comment_lines=[elem for elem in comment_lines.values()][0],
-                import_lines=[elem for elem in import_lines.values()][0],
-                cc=[elem for elem in cc.values()][0],
-                method=[elem for elem in method.values()][0],
-                operator=[elem for elem in operator.values()][0],
-                operand=[elem for elem in operand.values()][0],
-                unique_operator=[elem for elem in unique_operator.values()][0],
-                unique_operand=[elem for elem in unique_operand.values()][0],
-                vocab=[elem for elem in vocab.values()][0],
-                size=[elem for elem in size.values()][0],
-                vol=[elem for elem in vol.values()][0],
-                difficulty=[elem for elem in difficulty.values()][0],
-                effort=[elem for elem in effort.values()][0],
-                error=[elem for elem in error.values()][0],
-                test_time=[elem for elem in test_time.values()][0]
+                lines=lines,
+                blank_lines=blank_lines,
+                comment_lines=comment_lines,
+                import_lines=import_lines,
+                cyclomatic_complexity=cyclomatic_complexity,
+                method=method,
+                operator=operator,
+                operand=operand,
+                unique_operator=unique_operator,
+                unique_operand=unique_operand,
+                vocab=vocab,
+                size=size,
+                vol=vol,
+                difficulty=difficulty,
+                effort=effort,
+                error=error,
+                test_time=test_time
 
             )
-        else:
-            question_analytics.time_created = datetime.utcnow().replace(tzinfo=utc)
-            question_analytics.most_frequent_wrong_ans = ''
-            question_analytics.avg_grade = avg_grade
-            question_analytics.grade_std_dev = grade_std_dev
-            question_analytics.num_respondents = num_respondents
-            question_analytics.avg_attempt = avg_attempt
-            question_analytics.attempt_std_dev = attempt_std_dev
-            question_analytics.median_time_spent = median_time_spent
-            question_analytics.lines = [elem for elem in lines.values()][0]
-            question_analytics.blank_lines = [elem for elem in blank_lines.values()][0]
-            question_analytics.comment_lines = [elem for elem in comment_lines.values()][0]
-            question_analytics.import_lines = [elem for elem in import_lines.values()][0]
-            question_analytics.cc = [elem for elem in cc.values()][0]
-            question_analytics.method = [elem for elem in method.values()][0]
-            question_analytics.operator = [elem for elem in operator.values()][0]
-            question_analytics.operand = [elem for elem in operand.values()][0]
-            question_analytics.unique_operator = [elem for elem in unique_operator.values()][0]
-            question_analytics.unique_operand = [elem for elem in unique_operand.values()][0]
-            question_analytics.vocab = [elem for elem in vocab.values()][0]
-            question_analytics.size = [elem for elem in size.values()][0]
-            question_analytics.vol = [elem for elem in vol.values()][0]
-            question_analytics.difficulty = [elem for elem in difficulty.values()][0]
-            question_analytics.effort = [elem for elem in effort.values()][0]
-            question_analytics.error = [elem for elem in error.values()][0]
-            question_analytics.test_time = [elem for elem in test_time.values()][0]
-            question_analytics.save()
-        return JavaQuestionAnalyticsSerializer(question_analytics).data
-    if isinstance(analytics_by_question.first(), ParsonsSubmissionAnalytics):
-        lines = analytics_by_question.aggregate(Avg('parsonssubmissionanalytics__lines'))
-        blank_lines = analytics_by_question.aggregate(Avg('parsonssubmissionanalytics__blank_lines'))
-        comment_lines = analytics_by_question.aggregate(Avg('parsonssubmissionanalytics__comment_lines'))
-        import_lines = analytics_by_question.aggregate(Avg('parsonssubmissionanalytics__import_lines'))
-        cc = analytics_by_question.aggregate(Avg('parsonssubmissionanalytics__cc'))
-        method = analytics_by_question.aggregate(Avg('parsonssubmissionanalytics__method'))
-        operator = analytics_by_question.aggregate(Avg('parsonssubmissionanalytics__operator'))
-        operand = analytics_by_question.aggregate(Avg('parsonssubmissionanalytics__operand'))
-        unique_operator = analytics_by_question.aggregate(Avg('parsonssubmissionanalytics__unique_operator'))
-        unique_operand = analytics_by_question.aggregate(Avg('parsonssubmissionanalytics__unique_operand'))
-        vocab = analytics_by_question.aggregate(Avg('parsonssubmissionanalytics__vocab'))
-        size = analytics_by_question.aggregate(Avg('parsonssubmissionanalytics__size'))
-        vol = analytics_by_question.aggregate(Avg('parsonssubmissionanalytics__vol'))
-        difficulty = analytics_by_question.aggregate(Avg('parsonssubmissionanalytics__difficulty'))
-        effort = analytics_by_question.aggregate(Avg('parsonssubmissionanalytics__effort'))
-        error = analytics_by_question.aggregate(Avg('parsonssubmissionanalytics__error'))
-        test_time = analytics_by_question.aggregate(Avg('parsonssubmissionanalytics__test_time'))
-
-        try:
-            question_analytics = ParsonsQuestionAnalytics.objects.get(question=question)
-        except ParsonsQuestionAnalytics.DoesNotExist:
+        return question_analytics
+    if isinstance(analytics_by_question[0], ParsonsSubmissionAnalytics):
+        if count != 0:
+            lines = item.lines / count
+            blank_lines = item.blank_lines / count
+            comment_lines = item.comment_lines / count
+            import_lines = item.import_lines / count
+            cyclomatic_complexity = item.cyclomatic_complexity / count
+            method = item.method / count
+            operator = item.operator / count
+            operand = item.operand / count
+            unique_operator = item.unique_operator / count
+            unique_operand = item.unique_operand / count
+            vocab = item.vocab / count
+            size = item.size / count
+            vol = item.vol / count
+            difficulty = item.difficulty / count
+            effort = item.effort / count
+            error = item.error / count
+            test_time = item.test_time / count
             question_analytics = ParsonsQuestionAnalytics.objects.create(
                 question=question,
                 event=event,
                 course=course,
-                lines=[elem for elem in lines.values()][0],
-                blank_lines=[elem for elem in blank_lines.values()][0],
-                comment_lines=[elem for elem in comment_lines.values()][0],
-                import_lines=[elem for elem in import_lines.values()][0],
-                cc=[elem for elem in cc.values()][0],
-                method=[elem for elem in method.values()][0],
-                operator=[elem for elem in operator.values()][0],
-                operand=[elem for elem in operand.values()][0],
-                unique_operator=[elem for elem in unique_operator.values()][0],
-                unique_operand=[elem for elem in unique_operand.values()][0],
-                vocab=[elem for elem in vocab.values()][0],
-                size=[elem for elem in size.values()][0],
-                vol=[elem for elem in vol.values()][0],
-                difficulty=[elem for elem in difficulty.values()][0],
-                effort=[elem for elem in effort.values()][0],
-                error=[elem for elem in error.values()][0],
-                test_time=[elem for elem in test_time.values()][0],
                 most_frequent_wrong_ans='',
                 avg_grade=avg_grade,
                 grade_std_dev=grade_std_dev,
@@ -239,72 +240,48 @@ def create_question_analytics(question):
                 avg_attempt=avg_attempt,
                 attempt_std_dev=attempt_std_dev,
                 median_time_spent=median_time_spent,
+                lines=lines,
+                blank_lines=blank_lines,
+                comment_lines=comment_lines,
+                import_lines=import_lines,
+                cyclomatic_complexity=cyclomatic_complexity,
+                method=method,
+                operator=operator,
+                operand=operand,
+                unique_operator=unique_operator,
+                unique_operand=unique_operand,
+                vocab=vocab,
+                size=size,
+                vol=vol,
+                difficulty=difficulty,
+                effort=effort,
+                error=error,
+                test_time=test_time
+
             )
-        else:
-            question_analytics.time_created = datetime.utcnow().replace(tzinfo=utc)
-            question_analytics.most_frequent_wrong_ans = ''
-            question_analytics.avg_grade = avg_grade
-            question_analytics.grade_std_dev = grade_std_dev
-            question_analytics.num_respondents = num_respondents
-            question_analytics.avg_attempt = avg_attempt
-            question_analytics.attempt_std_dev = attempt_std_dev
-            question_analytics.median_time_spent = median_time_spent
-            question_analytics.lines = [elem for elem in lines.values()][0]
-            question_analytics.blank_lines = [elem for elem in blank_lines.values()][0]
-            question_analytics.comment_lines = [elem for elem in comment_lines.values()][0]
-            question_analytics.import_lines = [elem for elem in import_lines.values()][0]
-            question_analytics.cc = [elem for elem in cc.values()][0]
-            question_analytics.method = [elem for elem in method.values()][0]
-            question_analytics.operator = [elem for elem in operator.values()][0]
-            question_analytics.operand = [elem for elem in operand.values()][0]
-            question_analytics.unique_operator = [elem for elem in unique_operator.values()][0]
-            question_analytics.unique_operand = [elem for elem in unique_operand.values()][0]
-            question_analytics.vocab = [elem for elem in vocab.values()][0]
-            question_analytics.size = [elem for elem in size.values()][0]
-            question_analytics.vol = [elem for elem in vol.values()][0]
-            question_analytics.difficulty = [elem for elem in difficulty.values()][0]
-            question_analytics.effort = [elem for elem in effort.values()][0]
-            question_analytics.error = [elem for elem in error.values()][0]
-            question_analytics.test_time = [elem for elem in test_time.values()][0]
-            question_analytics.save()
-        return ParsonsQuestionAnalyticsSerializer(question_analytics).data
-    if isinstance(analytics_by_question.first(), MCQSubmissionAnalytics):
-        most_frequent_wrong_ans = [{}]
+        return question_analytics
+    if isinstance(analytics_by_question[0], MCQSubmissionAnalytics):
+        most_frequent_wrong_ans = [{"a": 0, "b": 0, "c": 0, "d": 0}]
+        for item in analytics_by_question:
+            most_frequent_wrong_ans[0][item.answer] += 1
         answers = MCQSubmissionAnalytics.objects \
             .filter(question=question).values_list('answer', flat=True)
         distinct_ans = answers.distinct()
-        correct_ans = question.answer
-        answers = list(answers)
-        for ans in distinct_ans:
-            most_frequent_wrong_ans[0][ans] = answers.count(ans)
-        choices = ['a', 'b', 'c', 'd']
-        non_chosen_choice = [x for x in choices if x not in set(distinct_ans)]
-        for item in non_chosen_choice:
-            most_frequent_wrong_ans[0][item] = 0
-        question_analytics = None
-        try:
-            question_analytics = MCQQuestionAnalytics.objects.get(question=question)
-        except MCQQuestionAnalytics.DoesNotExist:
-            MCQQuestionAnalytics.objects.create(
-                question=question,
-                event=event,
-                course=course,
-                most_frequent_wrong_ans=json.loads(json.dumps(most_frequent_wrong_ans)),
-                avg_grade=avg_grade,
-                grade_std_dev=grade_std_dev,
-                num_respondents=num_respondents,
-                avg_attempt=avg_attempt,
-                attempt_std_dev=attempt_std_dev,
-                median_time_spent=median_time_spent,
-            )
-        else:
-            question_analytics.time_created = datetime.utcnow().replace(tzinfo=utc)
-            question_analytics.most_frequent_wrong_ans = most_frequent_wrong_ans
-            question_analytics.avg_grade = avg_grade
-            question_analytics.grade_std_dev = grade_std_dev
-            question_analytics.num_respondents = num_respondents
-            question_analytics.avg_attempt = avg_attempt
-            question_analytics.attempt_std_dev = attempt_std_dev
-            question_analytics.median_time_spent = median_time_spent
-            question_analytics.save()
-        return MCQQuestionAnalyticsSerializer(question_analytics).data
+        # correct_ans = question.answer
+        # answers = list(answers)
+        # for ans in distinct_ans:
+        #     if ans != correct_ans:
+        #         most_frequent_wrong_ans.append({ans: answers.count(ans)})
+        question_analytics = MCQQuestionAnalytics(
+            question=question,
+            event=event,
+            course=course,
+            most_frequent_wrong_ans=most_frequent_wrong_ans,
+            avg_grade=avg_grade,
+            grade_std_dev=grade_std_dev,
+            num_respondents=num_respondents,
+            avg_attempt=avg_attempt,
+            attempt_std_dev=attempt_std_dev,
+            median_time_spent=median_time_spent,
+        )
+        return question_analytics
