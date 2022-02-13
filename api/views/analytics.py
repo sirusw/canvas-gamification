@@ -14,18 +14,38 @@ from analytics.services.question_analytics import get_all_question_analytics, ge
 from analytics.services.submission_analytics import get_submission_analytics, get_all_submission_analytics
 from analytics.services.user_analytics import get_all_user_analytics, get_user_analytics
 from api.permissions import TeacherAccessPermission
+from analytics.services.question_analytics import get_all_question_analytics, get_question_analytics, \
+    get_question_analytics_by_event
+from api.serializers.event_analytics import EventAnalyticsSerializer
 from api.serializers.question_analytics import MCQQuestionAnalyticsSerializer, JavaQuestionAnalyticsSerializer, \
     ParsonsQuestionAnalyticsSerializer
 from canvas.models import Event, CanvasCourse
 from course.models.models import Submission, Question
+from analytics.models import MCQSubmissionAnalytics, ParsonsSubmissionAnalytics, JavaSubmissionAnalytics
+from analytics.services.submission_analytics import get_submission_analytics, get_all_submission_analytics
+from api.permissions import TeacherAccessPermission
+from api.serializers.submission_analytics import MCQSubmissionAnalyticsSerializer, JavaSubmissionAnalyticsSerializer, \
+    ParsonsSubmissionAnalyticsSerializer
 
 
 class AnalyticsViewSet(viewsets.GenericViewSet):
     permission_classes = [TeacherAccessPermission]
     queryset = SubmissionAnalytics.objects.all()
 
+    def get_serialized_data(self, submission_analytics):
+        if isinstance(submission_analytics, MCQSubmissionAnalytics):
+            return MCQSubmissionAnalyticsSerializer(submission_analytics).data
+        if isinstance(submission_analytics, JavaSubmissionAnalytics):
+            return JavaSubmissionAnalyticsSerializer(submission_analytics).data
+        if isinstance(submission_analytics, ParsonsSubmissionAnalytics):
+            return ParsonsSubmissionAnalyticsSerializer(submission_analytics).data
+
     def list(self, request):
-        return Response(get_all_submission_analytics())
+        analytics = get_all_submission_analytics()
+        results = [
+            self.get_serialized_data(analytics) for analytics in analytics
+        ]
+        return Response(results)
 
     @action(detail=False, methods=['get'], url_path='submission')
     def submission(self, request):
@@ -47,8 +67,7 @@ class QuestionAnalyticsViewSet(viewsets.GenericViewSet):
             return ParsonsQuestionAnalyticsSerializer(question_analytics).data
 
     def list(self, request):
-        get_all_question_analytics()
-        query_set = QuestionAnalytics.objects.all()
+        query_set = get_all_question_analytics()
         results = [
             self.get_serialized_data(analytics) for analytics in query_set
         ]
@@ -58,7 +77,8 @@ class QuestionAnalyticsViewSet(viewsets.GenericViewSet):
     def question(self, request):
         question_id = request.GET.get('id', None)
         question = get_object_or_404(Question, pk=question_id)
-        return Response(get_question_analytics(question))
+        analytics = get_question_analytics(question)
+        return Response(self.get_serialized_data(analytics))
 
     @action(detail=False, methods=['get'], url_path='event')
     def event(self, request):
@@ -101,3 +121,4 @@ class UserAnalyticsViewSet(viewsets.GenericViewSet):
         user_id = request.GET.get('user', None)
         user = get_object_or_404(MyUser, pk=user_id)
         return Response((get_user_analytics(user, course)))
+        return Response(EventAnalyticsSerializer(get_event_analytics(event)).data)
