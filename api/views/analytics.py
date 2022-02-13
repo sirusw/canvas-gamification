@@ -15,14 +15,33 @@ from api.serializers.question_analytics import MCQQuestionAnalyticsSerializer, J
     ParsonsQuestionAnalyticsSerializer
 from canvas.models import Event
 from course.models.models import Submission, Question
+from analytics.models import MCQSubmissionAnalytics, ParsonsSubmissionAnalytics, JavaSubmissionAnalytics
+from analytics.models.models import SubmissionAnalytics
+from analytics.services.submission_analytics import get_submission_analytics, get_all_submission_analytics
+from api.permissions import TeacherAccessPermission
+from api.serializers.submission_analytics import MCQSubmissionAnalyticsSerializer, JavaSubmissionAnalyticsSerializer, \
+    ParsonsSubmissionAnalyticsSerializer
+from course.models.models import Submission
 
 
 class AnalyticsViewSet(viewsets.GenericViewSet):
     permission_classes = [TeacherAccessPermission]
     queryset = SubmissionAnalytics.objects.all()
 
+    def get_serialized_data(self, submission_analytics):
+        if isinstance(submission_analytics, MCQSubmissionAnalytics):
+            return MCQSubmissionAnalyticsSerializer(submission_analytics).data
+        if isinstance(submission_analytics, JavaSubmissionAnalytics):
+            return JavaSubmissionAnalyticsSerializer(submission_analytics).data
+        if isinstance(submission_analytics, ParsonsSubmissionAnalytics):
+            return ParsonsSubmissionAnalyticsSerializer(submission_analytics).data
+
     def list(self, request):
-        return Response(get_all_submission_analytics())
+        analytics = get_all_submission_analytics()
+        results = [
+            self.get_serialized_data(analytics) for analytics in analytics
+        ]
+        return Response(results)
 
     @action(detail=False, methods=['get'], url_path='submission')
     def submission(self, request):

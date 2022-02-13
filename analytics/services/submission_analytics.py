@@ -79,7 +79,7 @@ def create_submission_analytics(submission):
                                                            effort=sub_analytics_dict.effort,
                                                            error=sub_analytics_dict.error,
                                                            test_time=sub_analytics_dict.test_time)
-        return JavaSubmissionAnalyticsSerializer(submission_analytics_obj).data
+        return submission_analytics_obj
     if isinstance(submission, ParsonsSubmission):
         ans = submission.answer_files
         sub_analytics_dict = SubmissionAnalyticsObj(ans)
@@ -109,7 +109,7 @@ def create_submission_analytics(submission):
                                                               effort=sub_analytics_dict.effort,
                                                               error=sub_analytics_dict.error,
                                                               test_time=sub_analytics_dict.test_time)
-        return ParsonsSubmissionAnalyticsSerializer(submission_analytics_obj).data
+        return submission_analytics_obj
     if isinstance(submission, MultipleChoiceSubmission):
         submission_analytics_obj = MCQSubmissionAnalytics(uqj=submission.uqj, submission=submission,
                                                           question=submission.question,
@@ -121,4 +121,4 @@ def create_submission_analytics(submission):
                                                           time_spent=time_spent,
                                                           num_attempts=num_attempts,
                                                           is_correct=is_correct, )
-        return MCQSubmissionAnalyticsSerializer(submission_analytics_obj).data
+        return submission_analytics_obj
