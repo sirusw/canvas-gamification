@@ -11,36 +11,18 @@ from course.models.models import Submission, UserQuestionJunction
 
 
 def get_event_analytics(event):
-    get_all_question_analytics()
-    try:
-        analytics = EventAnalytics.objects.get(event=event)
-
-    except EventAnalytics.DoesNotExist:
-        return create_event_analytics(event)
-    else:
-        now = datetime.utcnow().replace(tzinfo=utc)
-        time_diff = now - analytics.time_created
-        time_diff = time_diff.total_seconds()
-        # the analytics expires after one day
-        if time_diff < 86400:
-            return EventAnalyticsSerializer(analytics).data
-        else:
-            return create_event_analytics(event)
+    return create_event_analytics(event)
 
 
 def get_all_event_analytics():
     events = Event.objects.all()
-    event_analytics = EventAnalytics.objects.all()
-    if events.count() == event_analytics.count():
-        return EventAnalyticsSerializer(event_analytics).data
+    event_analytics = []
     for event in events:
-        get_event_analytics(event)
-    event_analytics = EventAnalytics.objects.all()
-    return EventAnalyticsSerializer(event_analytics).data
+        event_analytics.append(get_event_analytics(event))
+    return event_analytics
 
 
 def create_event_analytics(event):
-    get_all_question_analytics()
     course = event.course
     distinct_uqj = Submission.objects.values('uqj').distinct()
     users = []
@@ -58,8 +40,10 @@ def create_event_analytics(event):
         high_score = max(grades)
         low_score = min(grades)
         avg_score = sum(grades) / len(grades)
+        print(grades)
         import statistics
-        avg_score_st_dev = statistics.stdev(grades)
+        avg_score_st_dev = statistics.pstdev(grades)
+        print(avg_score_st_dev)
         num_participants = len(grades)
     else:
         high_score = 0
@@ -69,21 +53,8 @@ def create_event_analytics(event):
         num_participants = 0
 
     grades = [{'grades': grades}]
-    analytics = None
-    try:
-        analytics = EventAnalytics.objects.get(event=event)
-    except EventAnalytics.DoesNotExist:
-        analytics = EventAnalytics.objects.create(event=event, course=course, high_score=high_score,
-                                                  lowest_score=low_score,
-                                                  avg_score=avg_score, avg_score_st_dev=avg_score_st_dev,
-                                                  num_participants=num_participants, grades=grades)
-        return EventAnalyticsSerializer(analytics).data
-    else:
-        analytics.high_score = high_score
-        analytics.lowest_score = low_score
-        analytics.avg_score = avg_score
-        analytics.avg_score_st_dev = avg_score_st_dev
-        analytics.num_participants = num_participants
-        analytics.grades = grades
-        analytics.save()
-        return EventAnalyticsSerializer(analytics).data
+    analytics = EventAnalytics(event=event, course=course, high_score=high_score,
+                               lowest_score=low_score,
+                               avg_score=avg_score, avg_score_st_dev=avg_score_st_dev,
+                               num_participants=num_participants, grades=grades)
+    return analytics

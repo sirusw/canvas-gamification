@@ -14,6 +14,7 @@ from analytics.services.submission_analytics import get_submission_analytics, ge
 from api.permissions import TeacherAccessPermission
 from analytics.services.question_analytics import get_all_question_analytics, get_question_analytics, \
     get_question_analytics_by_event
+from api.serializers.event_analytics import EventAnalyticsSerializer
 from api.serializers.question_analytics import MCQQuestionAnalyticsSerializer, JavaQuestionAnalyticsSerializer, \
     ParsonsQuestionAnalyticsSerializer
 from canvas.models import Event
@@ -99,4 +100,4 @@ class EventAnalyticsViewSet(viewsets.GenericViewSet):
     def question(self, request):
         event_id = request.GET.get('id', None)
         event = get_object_or_404(Event, pk=event_id)
-        return Response(get_event_analytics(event))
+        return Response(EventAnalyticsSerializer(get_event_analytics(event)).data)
