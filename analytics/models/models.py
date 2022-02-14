@@ -33,6 +33,7 @@ class QuestionAnalytics(PolymorphicModel):
     avg_grade = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     grade_std_dev = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     num_respondents = models.IntegerField(default=0)
+    num_submissions = models.IntegerField(default=0)
     avg_attempt = models.DecimalField(max_digits=4, decimal_places=1, default=0)
     attempt_std_dev = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     median_time_spent = models.DecimalField(max_digits=6, decimal_places=2, default=0)
