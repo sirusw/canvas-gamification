@@ -83,8 +83,10 @@ def create_question_analytics(question):
     for analytics in submission_analytics:
         if analytics.question.id == question.id:
             analytics_by_question.append(analytics)
+    num_submissions = 0
     num_respondents = []
     for analytics in analytics_by_question:
+        num_submissions += 1
         if analytics.user_id not in num_respondents:
             num_respondents.append(analytics.user_id)
     num_respondents = len(num_respondents)
@@ -139,7 +141,34 @@ def create_question_analytics(question):
     count = 0
     if isinstance(analytics_by_question[0], JavaSubmissionAnalytics) or isinstance(analytics_by_question[0],
                                                                                    ParsonsSubmissionAnalytics):
+        num_passed_submissions = [{}]
+        missing_lines_count = [{}]
+        missing_lines = []
+        if isinstance(analytics_by_question[0], ParsonsSubmissionAnalytics):
+            missing_lines = analytics_by_question[0].missing_lines
+        print("missing lines")
+        print(missing_lines)
+        if len(missing_lines) != 0:
+            for file_name in missing_lines[0]:
+                print("file name")
+                print(file_name)
+                missing_lines_count[0][file_name] = [{}]
         for item in analytics_by_question:
+            res = item.decoded_results
+            for file in res:
+                if file['status'] == 'PASS':
+                    num_passed_submissions[0][file['name']] = file['status']
+            if isinstance(analytics_by_question[0], ParsonsSubmissionAnalytics):
+                missing_lines = item.missing_lines
+                for file_name in missing_lines[0]:
+                    print("line")
+                    print(missing_lines[0][file_name])
+                    for line in missing_lines[0][file_name]:
+                        if line in missing_lines_count[0][file_name][0]:
+                            missing_lines_count[0][file_name][0][line] += 1
+                        else:
+                            missing_lines_count[0][file_name][0][line] = 0
+
             lines += item.lines
             blank_lines += item.blank_lines
             comment_lines += item.comment_lines
@@ -180,6 +209,8 @@ def create_question_analytics(question):
             test_time = item.test_time / count
 
             question_analytics = JavaQuestionAnalytics(
+                num_submissions=num_submissions,
+                num_passed_submissions=num_passed_submissions,
                 question=question,
                 event=event,
                 course=course,
@@ -229,7 +260,10 @@ def create_question_analytics(question):
             effort = item.effort / count
             error = item.error / count
             test_time = item.test_time / count
-            question_analytics = ParsonsQuestionAnalytics.objects.create(
+            question_analytics = ParsonsQuestionAnalytics(
+                num_submissions=num_submissions,
+                missing_lines=missing_lines_count,
+                num_passed_submissions=num_passed_submissions,
                 question=question,
                 event=event,
                 course=course,
@@ -266,13 +300,8 @@ def create_question_analytics(question):
             most_frequent_wrong_ans[0][item.answer] += 1
         answers = MCQSubmissionAnalytics.objects \
             .filter(question=question).values_list('answer', flat=True)
-        distinct_ans = answers.distinct()
-        # correct_ans = question.answer
-        # answers = list(answers)
-        # for ans in distinct_ans:
-        #     if ans != correct_ans:
-        #         most_frequent_wrong_ans.append({ans: answers.count(ans)})
         question_analytics = MCQQuestionAnalytics(
+            num_submissions=num_submissions,
             question=question,
             event=event,
             course=course,
