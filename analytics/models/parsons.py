@@ -29,6 +29,8 @@ class ParsonsSubmissionAnalytics(SubmissionAnalytics):
 
 
 class ParsonsQuestionAnalytics(QuestionAnalytics):
+    num_passed_submissions = JSONField()
+    missing_lines = JSONField()
     lines = models.IntegerField(default=0)
     blank_lines = models.IntegerField(default=0)
     comment_lines = models.IntegerField(default=0)

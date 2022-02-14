@@ -27,6 +27,7 @@ class JavaSubmissionAnalytics(SubmissionAnalytics):
 
 
 class JavaQuestionAnalytics(QuestionAnalytics):
+    num_passed_submissions = JSONField()
     lines = models.IntegerField(default=0)
     blank_lines = models.IntegerField(default=0)
     comment_lines = models.IntegerField(default=0)
