@@ -5,6 +5,8 @@ from course.fields import JSONField
 
 
 class ParsonsSubmissionAnalytics(SubmissionAnalytics):
+    decoded_results = JSONField()
+    missing_lines = JSONField()
     lines = models.IntegerField(default=0)
     blank_lines = models.IntegerField(default=0)
     comment_lines = models.IntegerField(default=0)
