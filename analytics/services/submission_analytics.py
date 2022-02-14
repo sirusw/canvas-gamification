@@ -1,3 +1,5 @@
+import json
+
 from accounts.models import MyUser
 from analytics.models import JavaSubmissionAnalytics, ParsonsSubmissionAnalytics, MCQSubmissionAnalytics
 from analytics.models.models import SubmissionAnalytics
@@ -28,18 +30,17 @@ def create_submission_analytics(submission):
     num_attempts = curr_uqj_submissions.count()
     user_obj = MyUser.objects.get(pk=submission.user.pk)
     time_spent = 0
+    submission_time = submission.submission_time
     try:
         question_last_access_time = Action.objects \
-            .filter(actor=user_obj, object_id=submission.question.id, verb=ActionVerb.OPENED) \
+            .filter(actor=user_obj, object_id=submission.question.id, verb=ActionVerb.OPENED,
+                    time_created__lt=submission_time) \
             .order_by('-time_created').first()
     except Action.DoesNotExist:
         pass
     else:
         if question_last_access_time:
             question_last_access_time = question_last_access_time.time_created
-            submission_time = Action.objects \
-                .filter(actor=user_obj, object_id=submission.id, verb=ActionVerb.SUBMITTED) \
-                .order_by('-time_created').first().time_created
             time_diff = submission_time - question_last_access_time
             time_spent = time_diff.total_seconds()
 
@@ -52,8 +53,10 @@ def create_submission_analytics(submission):
     if isinstance(submission, JavaSubmission):
         ans = submission.answer_files
         sub_analytics_dict = SubmissionAnalyticsObj(ans)
+        decoded_results = submission.get_decoded_results()
 
-        submission_analytics_obj = JavaSubmissionAnalytics(uqj=submission.uqj, submission=submission,
+        submission_analytics_obj = JavaSubmissionAnalytics(decoded_results=decoded_results,
+                                                           uqj=submission.uqj, submission=submission,
                                                            question=submission.question,
                                                            event=submission.question.event,
                                                            user_id=submission.user,
@@ -82,8 +85,25 @@ def create_submission_analytics(submission):
         return submission_analytics_obj
     if isinstance(submission, ParsonsSubmission):
         ans = submission.answer_files
+        input_files = submission.question.get_input_files()
+        missing_lines = [{}]
+        for item in input_files:
+            missing_lines[0][item["name"]] = []
+            lines = item["lines"]
+            num = len(lines)
+            ans_line_by_line = ans[item["name"]].split('\n')
+            for line in lines:
+                if line not in ans_line_by_line:
+                    missing_lines[0][item["name"]].append(line)
+                    num -= 1
+            if num == 0:
+                missing_lines[0][item["name"]] = []
+
         sub_analytics_dict = SubmissionAnalyticsObj(ans)
-        submission_analytics_obj = ParsonsSubmissionAnalytics(uqj=submission.uqj, submission=submission,
+        decoded_results = submission.get_decoded_results()
+        submission_analytics_obj = ParsonsSubmissionAnalytics(decoded_results=decoded_results,
+                                                              missing_lines=missing_lines,
+                                                              uqj=submission.uqj, submission=submission,
                                                               question=submission.question,
                                                               event=submission.question.event,
                                                               user_id=submission.user,
