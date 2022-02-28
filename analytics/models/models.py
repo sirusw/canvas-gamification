@@ -29,8 +29,10 @@ class QuestionAnalytics(PolymorphicModel):
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
     course = models.ForeignKey(CanvasCourse, on_delete=models.CASCADE, null=True)
 
+    assigned_difficulty = models.CharField(max_length=10, default='EASY')
     most_frequent_wrong_ans = JSONField()
     avg_grade = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    correct_num = models.IntegerField(default=0)
     grade_std_dev = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     num_respondents = models.IntegerField(default=0)
     num_submissions = models.IntegerField(default=0)
@@ -49,6 +51,7 @@ class EventAnalytics(models.Model):
     avg_score = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     avg_score_st_dev = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     num_participants = models.IntegerField(default=0)
+    total_submissions = models.IntegerField(default=0)
     grades = JSONField()
 
 

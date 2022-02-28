@@ -36,6 +36,14 @@ def create_event_analytics(event):
     for user in users:
         grades.append(get_total_event_grade(event, user))
 
+    all_uqj = Submission.objects.values('uqj')
+    total_submissions = 0
+    for item in all_uqj:
+        uqj = UserQuestionJunction.objects.get(pk=item['uqj'])
+        uqj_event = uqj.question.event
+        if uqj_event == event:
+            total_submissions += 1
+
     if len(grades) != 0:
         high_score = max(grades)
         low_score = min(grades)
@@ -54,5 +62,5 @@ def create_event_analytics(event):
     analytics = EventAnalytics(event=event, course=course, high_score=high_score,
                                lowest_score=low_score,
                                avg_score=avg_score, avg_score_st_dev=avg_score_st_dev,
-                               num_participants=num_participants, grades=grades)
+                               num_participants=num_participants, total_submissions=total_submissions, grades=grades)
     return analytics

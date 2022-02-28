@@ -35,6 +35,12 @@ class CourseViewSet(viewsets.ReadOnlyModelViewSet):
 
         return super(CourseViewSet, self).get_serializer_class()
 
+    def list(self, request, *args, **kwargs):
+        results = [
+            CourseSerializer(course).data for course in self.get_queryset()
+        ]
+        return Response(results)
+
     def get_queryset(self, *args, **kwargs):
         user = self.request.user
         registered = self.request.query_params.get('registered', None)

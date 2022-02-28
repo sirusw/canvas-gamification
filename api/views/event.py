@@ -24,6 +24,12 @@ class EventViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Event.objects.all()
 
+    def list(self, request, *args, **kwargs):
+        results = [
+            EventSerializer(event).data for event in self.get_queryset()
+        ]
+        return Response(results)
+
     def perform_create(self, serializer):
         request = serializer.context['request']
         serializer.save()

@@ -13,6 +13,7 @@ from course.models.parsons import ParsonsSubmission
 unary_op_list = ["-", "++", "--", "!", "~"]
 binary_op_list = ["+", "-", "*", "/", "%", "!=", "<", "<=", ">", ">=", "==", "^", "||", "|",
                   "&&", "&", "+=", "-=", "*=", "/=", "%=", "&=", "^=", "="]
+brackets = ['{', '}', '[', ']', '(', ')']
 
 
 def num_lines(string):
@@ -96,7 +97,8 @@ def num_op(string):
                     else:
                         split = words[i].split(bi)
                         for op in split:
-                            operand_list.append(op)
+                            if op != "" and op not in operand_list and 'System.out' not in op and op not in brackets:
+                                operand_list.append(op)
 
                     num_op_in_line += 1
                     operator += 1
@@ -109,13 +111,13 @@ def num_op(string):
                 neg_sign = len(re.findall("^-[\w]+", words[i]))
                 rep = len(re.findall(pattern_exception2, words[i]))
                 if uni in words[i] and neg_sign > 0 and pattern_exception not in words[i] and rep == 0:
-
                     if uni not in operator_list:
                         operator_list.append(uni)
                     split = words[i].split(uni)
                     for op in split:
                         if op != "" and op not in operand_list:
                             operand_list.append(op)
+                            break
 
                     operator += 1
                     operand += 1

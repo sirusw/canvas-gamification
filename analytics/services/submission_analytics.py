@@ -25,13 +25,23 @@ def get_all_submission_analytics():
     return analytics
 
 
+def get_submission_analytics_by_question(question):
+    submissions = Submission.objects.all()
+    analytics = []
+    for submission in submissions:
+        if submission.question.id == question.id:
+            analytics.append(create_submission_analytics(submission))
+    return analytics
+
+
 def create_submission_analytics(submission):
     curr_uqj_submissions = Submission.objects.filter(uqj=submission.uqj.id)
     num_attempts = curr_uqj_submissions.count()
     user_obj = MyUser.objects.get(pk=submission.user.pk)
     time_spent = 0
-    submission_time = submission.submission_time
+
     try:
+        submission_time = Action.objects.get(object_id=submission.pk, verb=ActionVerb.SUBMITTED).time_created
         question_last_access_time = Action.objects \
             .filter(actor=user_obj, object_id=submission.question.id, verb=ActionVerb.OPENED,
                     time_created__lt=submission_time) \
@@ -40,15 +50,16 @@ def create_submission_analytics(submission):
         pass
     else:
         if question_last_access_time:
+
             question_last_access_time = question_last_access_time.time_created
             time_diff = submission_time - question_last_access_time
             time_spent = time_diff.total_seconds()
 
-    is_correct = False
-    for item in curr_uqj_submissions:
-        if item.is_correct is True:
-            is_correct = True
-            break
+    # is_correct = False
+    # for item in curr_uqj_submissions:
+    #     if item.is_correct is True:
+    #         is_correct = True
+    #         break
 
     if isinstance(submission, JavaSubmission):
         ans = submission.answer_files
@@ -64,7 +75,7 @@ def create_submission_analytics(submission):
                                                            last_name=user_obj.last_name,
                                                            ans_file=ans, time_spent=time_spent,
                                                            num_attempts=num_attempts,
-                                                           is_correct=is_correct,
+                                                           is_correct=submission.is_correct,
                                                            lines=sub_analytics_dict.lines,
                                                            blank_lines=sub_analytics_dict.blank_lines,
                                                            comment_lines=sub_analytics_dict.comment_lines,
@@ -93,7 +104,14 @@ def create_submission_analytics(submission):
             num = len(lines)
             ans_line_by_line = ans[item["name"]].split('\n')
             for line in lines:
-                if line not in ans_line_by_line:
+                has_line = False
+                if len(ans_line_by_line) <= 1:
+                    break
+                for ans_line in ans_line_by_line:
+                    if line in ans_line:
+                        has_line = True
+                        break
+                if not has_line:
                     missing_lines[0][item["name"]].append(line)
                     num -= 1
             if num == 0:
@@ -111,7 +129,7 @@ def create_submission_analytics(submission):
                                                               last_name=user_obj.last_name,
                                                               ans_file=ans, time_spent=time_spent,
                                                               num_attempts=num_attempts,
-                                                              is_correct=is_correct,
+                                                              is_correct=submission.is_correct,
                                                               lines=sub_analytics_dict.lines,
                                                               blank_lines=sub_analytics_dict.blank_lines,
                                                               comment_lines=sub_analytics_dict.comment_lines,
@@ -140,5 +158,5 @@ def create_submission_analytics(submission):
                                                           answer=submission.answer,
                                                           time_spent=time_spent,
                                                           num_attempts=num_attempts,
-                                                          is_correct=is_correct, )
+                                                          is_correct=submission.is_correct, )
         return submission_analytics_obj
