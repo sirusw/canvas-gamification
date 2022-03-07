@@ -195,8 +195,8 @@ class SubmissionAnalyticsObj:
         self.method = method
         self.operator = operator
         self.operand = operand
-        self.unique_operator = unique_operator
-        self.unique_operand = unique_operand
+        self.unique_operator = operator if unique_operator > operator else unique_operator
+        self.unique_operand = operand if unique_operand > operand else unique_operand
         self.vocab = vocab
         self.size = size
         self.vol = vol

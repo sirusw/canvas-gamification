@@ -25,6 +25,7 @@ class ParsonsSubmissionAnalytics(SubmissionAnalytics):
     effort = models.DecimalField(max_digits=8, decimal_places=4, default=0)
     error = models.DecimalField(max_digits=8, decimal_places=4, default=0)
     test_time = models.DecimalField(max_digits=8, decimal_places=4, default=0)
+    space = models.DecimalField(max_digits=12, decimal_places=4, default=0)
     ans_file = JSONField()
 
 
@@ -47,4 +48,7 @@ class ParsonsQuestionAnalytics(QuestionAnalytics):
     difficulty = models.DecimalField(max_digits=8, decimal_places=4, default=0)
     effort = models.DecimalField(max_digits=8, decimal_places=4, default=0)
     error = models.DecimalField(max_digits=8, decimal_places=4, default=0)
-    test_time = models.DecimalField(max_digits=8, decimal_places=4, default=0)
+    test_time = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    test_time_stdev = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    space = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    space_stdev = models.DecimalField(max_digits=8, decimal_places=2, default=0)

@@ -30,6 +30,7 @@ class QuestionAnalytics(PolymorphicModel):
     course = models.ForeignKey(CanvasCourse, on_delete=models.CASCADE, null=True)
 
     assigned_difficulty = models.CharField(max_length=10, default='EASY')
+    junit_template = models.TextField(default='n/a')
     most_frequent_wrong_ans = JSONField()
     avg_grade = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     correct_num = models.IntegerField(default=0)

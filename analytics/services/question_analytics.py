@@ -5,6 +5,8 @@ import statistics
 
 from analytics.models.parsons import ParsonsQuestionAnalytics
 from analytics.services.submission_analytics import get_all_submission_analytics, get_submission_analytics_by_question
+from course.models.java import JavaQuestion
+from course.models.parsons import ParsonsQuestion
 
 
 def get_question_analytics(question):
@@ -16,8 +18,10 @@ def get_all_question_analytics():
     distinct_events = []
     analytics = []
     for item in submission_analytics:
-        if item.event not in distinct_events:
-            distinct_events.append(item.event)
+        if hasattr(item, 'event'):
+            if item.event not in distinct_events:
+                distinct_events.append(item.event)
+                hasattr(item, 'event')
     for event in distinct_events:
         question_list = []
         for item in submission_analytics:
@@ -63,7 +67,21 @@ def create_question_analytics(question):
     time_spent = []
     distinct_user = []
     correct_num = 0
+    total_time = 0
+    real_test_time = []
+    total_sub = 0
+    total_space = 0
+    test_space = []
     for item in analytics_by_question:
+        if isinstance(item, JavaSubmissionAnalytics) or isinstance(item, ParsonsSubmissionAnalytics):
+            if item.test_time:
+                total_time += round(float(item.test_time), 2)
+                real_test_time.append(round(float(item.test_time), 2))
+            if item.space:
+                total_space += round(float(item.space), 2)
+                test_space.append(round(float(item.space), 2))
+            if item.test_time or item.space:
+                total_sub += 1
         total_grade += item.submission.grade
         grade.append(item.submission.grade)
         time_spent.append(item.time_spent)
@@ -80,6 +98,11 @@ def create_question_analytics(question):
         total_attempts += max_attempt
         attempts.append(max_attempt)
 
+    if isinstance(item, JavaSubmissionAnalytics) or isinstance(item, ParsonsSubmissionAnalytics):
+        avg_time = round(total_time / total_sub, 2)
+        avg_time_stdev = round(statistics.stdev(real_test_time) if len(real_test_time) > 1 else 0, 2)
+        avg_space = round(total_space / total_sub, 2)
+        avg_space_stdev = round(statistics.stdev(test_space) if len(test_space) > 1 else 0, 2)
     avg_attempt = total_attempts / num_respondents
     attempt_std_dev = statistics.stdev(attempts) if len(attempts) > 1 else 0
     avg_grade = total_grade / num_respondents
@@ -108,6 +131,7 @@ def create_question_analytics(question):
     count = 0
     if isinstance(analytics_by_question[0], JavaSubmissionAnalytics) or isinstance(analytics_by_question[0],
                                                                                    ParsonsSubmissionAnalytics):
+        most_frequent_error = {}
         num_passed_submissions = [{}]
         missing_lines_count = [{}]
         missing_lines = []
@@ -117,6 +141,14 @@ def create_question_analytics(question):
             for file_name in missing_lines[0]:
                 missing_lines_count[0][file_name] = [{}]
         for item in analytics_by_question:
+            if not item.is_correct:
+                stderr = item.submission.get_decoded_stderr()
+                has_key = False
+                if stderr in most_frequent_error and stderr != '':
+                    most_frequent_error[stderr] += 1
+                else:
+                    most_frequent_error[stderr] = 1
+            most_frequent_error = {k: v for k, v in sorted(most_frequent_error.items(), key=lambda obj: obj[1])}
             res = item.decoded_results
             for file in res:
                 if file['status'] == 'PASS':
@@ -149,7 +181,6 @@ def create_question_analytics(question):
                 difficulty += item.difficulty
                 effort += item.effort
                 error += item.error
-                test_time += item.test_time
                 count += 1
 
     if isinstance(analytics_by_question[0], JavaSubmissionAnalytics):
@@ -171,14 +202,15 @@ def create_question_analytics(question):
             effort = effort / count
             error = error / count
             test_time = test_time / count
-
+            question.__class__ = JavaQuestion
             question_analytics = JavaQuestionAnalytics(
                 num_submissions=num_submissions,
                 num_passed_submissions=num_passed_submissions,
                 question=question,
                 event=event,
                 course=course,
-                most_frequent_wrong_ans='',
+                most_frequent_wrong_ans=most_frequent_error,
+                junit_template=question.junit_template,
                 avg_grade=avg_grade,
                 correct_num=correct_num,
                 grade_std_dev=grade_std_dev,
@@ -202,7 +234,10 @@ def create_question_analytics(question):
                 difficulty=difficulty,
                 effort=effort,
                 error=error,
-                test_time=test_time,
+                test_time=avg_time,
+                test_time_stdev=avg_time_stdev,
+                space=avg_space,
+                space_stdev=avg_space_stdev,
                 assigned_difficulty=analytics_by_question[0].submission.question.difficulty,
 
             )
@@ -226,6 +261,7 @@ def create_question_analytics(question):
             effort = effort / count
             error = error / count
             test_time = test_time / count
+            question.__class__ = ParsonsQuestion
             question_analytics = ParsonsQuestionAnalytics(
                 num_submissions=num_submissions,
                 missing_lines=missing_lines_count,
@@ -233,7 +269,8 @@ def create_question_analytics(question):
                 question=question,
                 event=event,
                 course=course,
-                most_frequent_wrong_ans='',
+                most_frequent_wrong_ans=most_frequent_error,
+                junit_template=question.junit_template,
                 avg_grade=avg_grade,
                 correct_num=correct_num,
                 grade_std_dev=grade_std_dev,
@@ -257,7 +294,10 @@ def create_question_analytics(question):
                 difficulty=difficulty,
                 effort=effort,
                 error=error,
-                test_time=test_time,
+                test_time=avg_time,
+                test_time_stdev=avg_time_stdev,
+                space=avg_space,
+                space_stdev=avg_space_stdev,
                 assigned_difficulty=analytics_by_question[0].submission.question.difficulty,
 
             )

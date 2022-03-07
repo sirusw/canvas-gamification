@@ -92,7 +92,8 @@ def create_submission_analytics(submission):
                                                            difficulty=sub_analytics_dict.difficulty,
                                                            effort=sub_analytics_dict.effort,
                                                            error=sub_analytics_dict.error,
-                                                           test_time=sub_analytics_dict.test_time)
+                                                           test_time=submission.results[0]['time'],
+                                                           space=submission.results[0]['memory'])
         return submission_analytics_obj
     if isinstance(submission, ParsonsSubmission):
         ans = submission.answer_files
@@ -146,7 +147,8 @@ def create_submission_analytics(submission):
                                                               difficulty=sub_analytics_dict.difficulty,
                                                               effort=sub_analytics_dict.effort,
                                                               error=sub_analytics_dict.error,
-                                                              test_time=sub_analytics_dict.test_time)
+                                                              test_time=submission.results[0]['time'],
+                                                              space=submission.results[0]['memory'])
         return submission_analytics_obj
     if isinstance(submission, MultipleChoiceSubmission):
         submission_analytics_obj = MCQSubmissionAnalytics(uqj=submission.uqj, submission=submission,
